@@ -7,7 +7,7 @@ DNSCache::DNSCache(size_t max_size)
 
 // // Вариант оптимизированный по доступу к unordered_map.
 // void DNSCache::update(const std::string& name, const std::string& ip) {
-//   std::unique_lock<shared_mutex_t> lock(mutex_);
+//   std::unique_lock<mutex_t> lock(mutex_);
 //   auto [it, done] = index_.try_emplace(name, cache_element_t{});
 //   if (done) {   // Добавление нового элемента в кэш.
 //     if (list_.size() >= capacity) {  // Чаще будет происходить ситуация, когда кэш заполнен.
@@ -30,7 +30,7 @@ DNSCache::DNSCache(size_t max_size)
 
 // Вариант оптимизированный аллокации памяти.
 void DNSCache::update(const std::string& name, const std::string& ip) {
-  std::unique_lock<shared_mutex_t> lock(mutex_);
+  std::unique_lock<mutex_t> lock(mutex_);
   if (list_.size() >= capacity_) { // Кэш заполнен, поэтому произойдет либо обновление записи, либо вытеснение.
     if (auto it = index_.find(name); it == index_.end()) {
       list_.splice(list_.begin(), list_, std::next(list_.rbegin()).base()); // Премещение последнего элемента в начало.
@@ -59,7 +59,7 @@ void DNSCache::update(const std::string& name, const std::string& ip) {
 
 
 std::string DNSCache::resolve(const std::string& name) {
-  std::unique_lock<shared_mutex_t> lock(mutex_);
+  std::unique_lock<mutex_t> lock(mutex_);
   if (auto it = index_.find(name); it != index_.end()) {
     list_.splice(list_.begin(), list_, it->second); // Премещение последнего элемента в начало.
     return it->second->value;

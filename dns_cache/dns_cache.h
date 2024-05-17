@@ -26,7 +26,7 @@ public:
   using cache_element_t = typename list_t::iterator;
   using index_t = std::unordered_map<key_type, cache_element_t>;
 
-  using shared_mutex_t = std::shared_mutex;
+  using mutex_t = std::mutex;
 
   explicit DNSCache(size_t max_size);
   void update(const std::string& name, const std::string& ip);
@@ -40,5 +40,5 @@ protected:
   size_t capacity_;
   list_t list_;
   index_t index_;
-  shared_mutex_t mutex_;
+  mutex_t mutex_;
 };
