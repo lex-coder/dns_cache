@@ -1,9 +1,40 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/benchmark/catch_benchmark.hpp>
 #include <dns_cache.h>
 #include <future>
 #include <array>
+#include <random>
+#include <ctime>
 
 using input_container = std::vector<std::pair<std::string, std::string>>;
+
+struct generator_t {
+  std::mt19937 random;
+  generator_t() {
+    random.seed(static_cast<uint32_t>(std::time(nullptr)));
+  }
+
+  input_container operator()(const std::string prefix, size_t count) {
+    input_container values;
+    for (size_t i = 0; i < count; i++) {
+      values.emplace_back(name(prefix), value());
+    }
+    return values;
+  }
+
+  std::pair<std::string, std::string> operator()(const std::string prefix) {
+    return {name(prefix), value()};
+  }
+
+private:
+  std::string name(const std::string prefix) {
+    return prefix + "." + std::to_string(random()%256) + ".com";
+  }
+
+  std::string value() {
+    return std::to_string(random());
+  }
+};
 
 TEST_CASE("dns_cache") {
   constexpr size_t capacity = 10;
@@ -38,16 +69,6 @@ TEST_CASE("dns_cache") {
 
   SECTION("multithreaded") {
     using result_t = std::vector<bool>;
-
-    auto multithreaded_check = [&cache](const input_container& input) {
-      result_t results;
-      for (const auto& i : input) {
-        cache.update(i.first, i.second);
-        auto address = cache.resolve(i.first);
-        results.emplace_back(address == i.second);
-      }
-      return results;
-    };
 
     std::array<input_container, 2> input = {
       input_container {
@@ -86,6 +107,16 @@ TEST_CASE("dns_cache") {
       }
     };
 
+    auto multithreaded_check = [&cache](const input_container& input) {
+      result_t results;
+      for (const auto& i : input) {
+        cache.update(i.first, i.second);
+        auto address = cache.resolve(i.first);
+        results.emplace_back(address == i.second);
+      }
+      return results;
+    };
+
     std::vector<std::future<result_t>> features;
     for (const auto& set: input) {
       features.emplace_back(std::async(std::launch::async, multithreaded_check, set));
@@ -100,4 +131,31 @@ TEST_CASE("dns_cache") {
     }
 
   }
+}
+
+TEST_CASE("benchmark") {
+  generator_t generator;
+
+  DNSCache cache(100);
+  std::array<input_container, 2> input = {
+    generator("thread1", 10000),
+    generator("thread2", 10000),
+  };
+
+  std::atomic_bool start = false;
+  auto update_task = [&cache, &start](const input_container& input) {
+    while (!start);
+    for (const auto& i : input) {
+      cache.update(i.first, i.second);
+    }
+  };
+
+  BENCHMARK("update cache") {
+    std::vector<std::future<void>> features;
+    for (const auto& set: input) {
+      features.emplace_back(std::async(std::launch::async, update_task, set));
+    }
+    start = true;
+    for (const auto& f : features) f.wait();
+  };
 }
