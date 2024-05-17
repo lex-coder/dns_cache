@@ -14,6 +14,7 @@ elseif (MSVC)
 add_compile_options(/std:c++17)
 endif()
 
-add_subdirectory(modules/dns_cache)
+add_subdirectory(dns_cache)
+add_subdirectory(utils)
 add_subdirectory(3rdparty/Catch2)
 add_subdirectory(tests)
