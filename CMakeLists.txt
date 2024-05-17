@@ -1,0 +1,19 @@
+project(dns_cache_example LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.17)
+
+set(CMAKE_CXX_STANDART 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g)
+  else()
+    add_compile_options(-O2)
+  endif()
+elseif (MSVC)
+add_compile_options(/std:c++17)
+endif()
+
+add_subdirectory(modules/dns_cache)
+add_subdirectory(3rdparty/Catch2)
+add_subdirectory(tests)
