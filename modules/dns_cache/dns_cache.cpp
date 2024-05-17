@@ -59,8 +59,9 @@ void DNSCache::update(const std::string& name, const std::string& ip) {
 
 
 std::string DNSCache::resolve(const std::string& name) {
-  std::shared_lock<shared_mutex_t> lock(mutex_);
+  std::unique_lock<shared_mutex_t> lock(mutex_);
   if (auto it = index_.find(name); it != index_.end()) {
+    list_.splice(list_.begin(), list_, it->second); // Премещение последнего элемента в начало.
     return it->second->value;
   }
   return {};
