@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 #include <list>
-#include <shared_mutex>
+#include <mutex>
 
 class DNSCache {
 public:
@@ -29,11 +29,16 @@ public:
   using mutex_t = std::mutex;
 
   explicit DNSCache(size_t max_size);
+
   void update(const std::string& name, const std::string& ip);
   std::string resolve(const std::string& name);
 
   size_t size() const {
     return list_.size();
+  }
+
+  size_t capacity() const {
+    return capacity_;
   }
 
 protected:

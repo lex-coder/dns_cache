@@ -1,11 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
-#include <dns_cache.h>
 #include <future>
 #include <array>
 #include <random>
 #include <ctime>
 #include <chrono>
+
+#include "dns_cache.h"
+#include "global_dns_cache.h"
 
 using input_container = std::vector<std::pair<std::string, std::string>>;
 
@@ -134,6 +136,11 @@ TEST_CASE("dns_cache") {
   }
 }
 
+TEST_CASE("singleton") {
+  REQUIRE(global::DNSCache::init(10).capacity() == 10);
+  REQUIRE(global::DNSCache::instance().capacity() == 10);
+}
+
 TEST_CASE("benchmark") {
   generator_t generator;
 
@@ -155,7 +162,7 @@ TEST_CASE("benchmark") {
   };
 
   auto duration = meagure_task(input[0]);
-  printf("Singlethread duration (%d times): %d ms\n", input[0].size(), duration.count());
+  printf("Singlethread duration (%lld times): %lld ms\n", input[0].size(), duration.count());
 
   {
     std::atomic_bool start = false;
@@ -166,7 +173,7 @@ TEST_CASE("benchmark") {
     start = true;
     for (auto& f : features) {
       f.wait();
-      printf("Multithread duration (%d times): %d ms\n", input[0].size(), f.get().count());
+      printf("Multithread duration (%lld times): %lld ms\n", input[0].size(), f.get().count());
     }
   }
 }

@@ -1,4 +1,5 @@
 #include "dns_cache.h"
+#include <mutex>
 
 DNSCache::DNSCache(size_t max_size)
   : capacity_(max_size)
