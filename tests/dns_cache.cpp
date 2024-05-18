@@ -5,6 +5,7 @@
 #include <array>
 #include <random>
 #include <ctime>
+#include <chrono>
 
 using input_container = std::vector<std::pair<std::string, std::string>>;
 
@@ -142,20 +143,30 @@ TEST_CASE("benchmark") {
     generator("thread2", 10000),
   };
 
-  std::atomic_bool start = false;
-  auto update_task = [&cache, &start](const input_container& input) {
+  auto meagure_task = [&cache](const input_container& input, const std::atomic_bool& start = true) {
     while (!start);
+    using clock_t = std::chrono::steady_clock;
+    using time_unit_t = std::chrono::milliseconds;
+    auto begin = clock_t::now();
     for (const auto& i : input) {
       cache.update(i.first, i.second);
     }
+    return std::chrono::duration_cast<time_unit_t>(clock_t::now() - begin);
   };
 
-  BENCHMARK("update cache") {
-    std::vector<std::future<void>> features;
+  auto duration = meagure_task(input[0]);
+  printf("Singlethread duration (%d times): %d ms\n", input[0].size(), duration.count());
+
+  {
+    std::atomic_bool start = false;
+    std::vector<std::future<std::chrono::milliseconds>> features;
     for (const auto& set: input) {
-      features.emplace_back(std::async(std::launch::async, update_task, set));
+      features.emplace_back(std::async(std::launch::async, meagure_task, set));
     }
     start = true;
-    for (const auto& f : features) f.wait();
-  };
+    for (auto& f : features) {
+      f.wait();
+      printf("Multithread duration (%d times): %d ms\n", input[0].size(), f.get().count());
+    }
+  }
 }
